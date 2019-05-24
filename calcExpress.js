@@ -1,176 +1,176 @@
 const express = require('express');
 const uuid = require('uuid');
+const tests = require('./calcExpressTests');
 
 const app = express();
 const port = 3000;
-const router = express.Router();
-let users = [];
-
-// Custom exception constructor that also allows handling with the response it came from
-function CustomException(message, res) {
-    // TODO: Check if sending the res in the exception works. Probably not. I guess I need to do a try catch in each method.
-    const error = new Error(message);
-    error.res = res;
-    return error;
-}
-CustomException.prototype = Object.create(Error.prototype, {
-    constructor: { value: CustomException }
-});
+let sessions = [];
 
 /* Routing */
 
-try {
-    // GET - Starting a new session and returning the unique string assigned to the user
-    router.get('/start', (req, res) => {
-        const newUser = {
-            uniquestring: uuid.v4(),
-            M: 0,
-        };
-        users.push(newUser);
-        res.status(200).json({"uniquestring": newUser.uniquestring});
-    });
+// A wrapper for route handlers for using asynchronous code
+const routeWrapper = (fn) => {
+    return (req, res, next) => {
+        Promise.resolve(fn(req, res, next)).catch(next);
+    };
+};
+
+    // GET - Starting a new session and returning the unique string assigned to the session
+    app.get('/start', routeWrapper( async (req, res) => {
+        let newSession = {
+                uniqustring: uuid.v4(),
+                M: 0,
+            };
+        await sessions.push(newSession);
+        await res.status(200).json({"uniqustring": newSession.uniqustring});
+    }));
 
     // POST - Adding :num to M and returning the new M
-    router.post('/calc/:uniquestring/add/:num', (req, res) => {
-
+    app.post('/calc/:uniqustring/add/:num', (req, res) => {
         if (Number.isNaN(parseInt(req.params.num))) {
             // Exception if num is not a number
-            throw new CustomException(`${req.params.num} is not a number`, res);
+            throw new Error(`${parseInt(req.params.num)} is not a number`);
         }
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    user.M += num;
-                    res.status(200).json({M: user.M})
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    session.M += parseInt(req.params.num);
+                    res.status(200).json({"M": session.M})
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
     // POST - Subtracting :num from M and returning the new M
-    router.post('/calc/:uniquestring/sub/:num', (req, res) => {
+    app.post('/calc/:uniqustring/sub/:num', (req, res) => {
         if (Number.isNaN(parseInt(req.params.num))) {
             // Exception if num is not a number
-            throw new CustomException(`${req.params.num} is not a number`, res);
+            throw new Error(`${req.params.num} is not a number`);
         }
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    user.M -= num;
-                    res.status(200).json({M: user.M})
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    session.M -= parseInt(req.params.num);
+                    res.status(200).json({M: session.M})
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
     // PUT - Multiplying :num with M and returning the new M
-    router.put('/calc/:uniquestring/multiply/:num', (req, res) => {
+    app.put('/calc/:uniqustring/multiply/:num', (req, res) => {
         if (Number.isNaN(parseInt(req.params.num))) {
             // Exception if num is not a number
-            throw new CustomException(`${req.params.num} is not a number`, res);
+            throw new Error(`${req.params.num} is not a number`);
         }
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    user.M += num;
-                    res.status(200).json({M: user.M})
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    session.M *= parseInt(req.params.num);
+                    res.status(200).json({M: session.M})
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
-    router.put('/calc/:uniquestring/divide/:num', (req, res) => {
+    app.put('/calc/:uniqustring/divide/:num', (req, res) => {
         if (Number.isNaN(parseInt(req.params.num))) {
             // Exception if num is not a number
-            throw new CustomException(`${req.params.num} is not a number`, res);
+            throw new Error(`${req.params.num} is not a number`);
         }
-        if (num === 0){
+        if (parseInt(req.params.num) === 0){
             // Exception if num is 0
-            throw new CustomException("Can't divide by zero", res);
+            throw new Error("Can't divide by zero");
         }
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    user.M += num;
-                    res.status(200).json({M: user.M})
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    session.M /= parseInt(req.params.num);
+                    res.status(200).json({M: session.M})
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
     // GET - getting M
-    router.get('/calc/:uniquestring/M', (req, res) => {
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+    app.get('/calc/:uniqustring/M', (req, res) => {
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    res.status(200).json({M: user.M})
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    res.status(200).json({M: session.M})
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
     // POST - Resetting M and returning it
-    router.post('/calc/:uniquestring/reset', (req, res) => {
-        const found = users.some(user => user.uniquestring === parseInt(req.params.uniquestring));
+    app.post('/calc/:uniqustring/reset', (req, res) => {
+        const found = sessions.some(session => session.uniqustring === req.params.uniqustring);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === parseInt(req.params.uniquestring)) {
-                    user.M = 0;
+            sessions.forEach(session => {
+                if (session.uniqustring === req.params.uniqustring) {
+                    session.M = 0;
                     res.status(200).json({M: 0});
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
-    // DELETE - Deleting session (user)
-    router.delete('/calc/:uniquestring/delete', (req, res) => {
-        let paramUID = parseInt(req.params.uniquestring);
-        const found = users.some(user => user.uniquestring === paramUID);
+    // DELETE - Deleting session
+    app.delete('/calc/:uniqustring/del', (req, res) => {
+        let paramUID = req.params.uniqustring;
+        const found = sessions.some(session => session.uniqustring === paramUID);
         if (found) {
-            users.forEach(user => {
-                if (user.uniquestring === paramUID) {
-                    // Filtering out the user to delete
-                    users = users.filter(user => user.uniquestring !== paramUID);
+            sessions.forEach(session => {
+                if (session.uniqustring === paramUID) {
+                    // Filtering out the session to delete
+                    sessions = sessions.filter(session => session.uniqustring !== paramUID);
                     res.status(200).end();
                 }
             });
         } else {
-            // There's no user with this unique string
-            res.status(404).json({msg: `${req.params.uniquestring} is unknown`});
+            // There's no session with this unique string
+            res.status(404).json({msg: `${req.params.uniqustring} is unknown`});
         }
     });
 
-} catch (error) {
-    // Sending HTTP status 500 for exceptions as required in the assignment
-    error.res.status(500).json({msg: `${error.message}`});
-}
+tests.requestTests();
 
-app.use(router);
+// Handling errors
+app.use(function (err, req, res, next) {
+    res.status(500).json({msg: `${err.message}`});
+});
+
+// Handling 404 responses
+app.use(function (req, res, next) {
+    res.status(404).send("Sorry, can't find what you requested.")
+});
 
 app.listen(port, () => console.log(`Server started on port ${port}`));
+
 
 // TODO:
 // For tests: require http and create the requests
