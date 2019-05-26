@@ -8,22 +8,16 @@ let sessions = [];
 
 /* Routing */
 
-// A wrapper for route handlers for using asynchronous code
-const routeWrapper = (fn) => {
-    return (req, res, next) => {
-        Promise.resolve(fn(req, res, next)).catch(next);
-    };
-};
 
     // GET - Starting a new session and returning the unique string assigned to the session
-    app.get('/start', routeWrapper( async (req, res) => {
-        let newSession = {
+    app.get('/start', (req, res) => {
+        const newSession = {
                 uniqustring: uuid.v4(),
                 M: 0,
             };
-        await sessions.push(newSession);
-        await res.status(200).json({"uniqustring": newSession.uniqustring});
-    }));
+        sessions.push(newSession);
+        res.status(200).json({"uniqustring": newSession.uniqustring});
+    });
 
     // POST - Adding :num to M and returning the new M
     app.post('/calc/:uniqustring/add/:num', (req, res) => {
@@ -170,8 +164,3 @@ app.use(function (req, res, next) {
 });
 
 app.listen(port, () => console.log(`Server started on port ${port}`));
-
-
-// TODO:
-// For tests: require http and create the requests
-// Ask if it's ok to return 200 status codes for successful ops, and if it's ok to return jsons
